@@ -8,7 +8,7 @@ let yfont = null;
 let categoryEmoji = null;
 
 // ✅ NEW VIDEO LINK
-const HELP_GIF = "https://files.catbox.moe/dy5mqr.mp4";
+const HELP_GIF = "https://files.catbox.moe/rjdbb9.mp4";
 
 // 🔒 AUTHOR LOCK SYSTEM
 const AUTHOR_NAME = "FARHAN-KHAN";
