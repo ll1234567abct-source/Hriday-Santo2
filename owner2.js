@@ -9,9 +9,9 @@ module.exports = {
     version: "8.0.0",
     author: "SIYAM",
     role: 0,
-    shortDescription: "Premium Neon Info",
+    shortDescription: "Premium Neon owner",
     longDescription: "Premium Animated Info Card",
-    category: "info",
+    category: "owner",
     guide: "{pn}"
   },
 
@@ -380,4 +380,5 @@ function roundRect(ctx, x, y, width, height, radius, fill) {
 
   if (fill) ctx.fill();
   else ctx.stroke();
-    }
+        }
+                               
