@@ -11,7 +11,10 @@ module.exports = {
     version: "3.0",
     author: "𝆠፝𝐒𝐈𝐘𝐀𝐌-𝐇𝐀𝐒𝐀𝐍",
     countDown: 5,
-    role: 0,
+
+    // ONLY BOT ADMIN
+    role: 2,
+
     shortDescription: "Upload to Catbox",
     longDescription: "Reply image/video/audio to upload",
     category: "tools",
@@ -23,10 +26,32 @@ module.exports = {
   onStart: async function ({
     api,
     event,
-    message
+    message,
+    role
   }) {
 
     try {
+
+      // ONLY ADMIN ACCESS
+      if (role < 2) {
+
+        return message.reply(
+
+`╔══❖•ೋ° 🌙 °ೋ•❖══╗
+
+👑𝆠፝𝐒𝐈𝐘𝐀𝐌-𝐇𝐀𝐒𝐀𝐍 👑
+
+😾 কিরে ফাইল কি 😼তোর বাপে বানাইছে 🙄
+😾 তোদের কাছে চাইলে তো দিতি না 🤷
+🫵এখন ছ্যাঁচড়ার মতো আসছছ 😳কেন 🖕
+🦶গরিবের দল 👆👆
+
+👑 𝆠፝𝐍𝐈𝐉𝐇𝐔𝐌-𝐁𝐎𝐓 👑
+
+╚══❖•ೋ° 🌙 °ೋ•❖══╝`
+
+        );
+      }
 
       const reply =
         event.messageReply;
@@ -183,7 +208,7 @@ module.exports = {
         );
       }
 
-      // REACT SUCCESS
+      // SUCCESS REACT
       api.setMessageReaction(
         "✅",
         event.messageID,
@@ -202,7 +227,7 @@ module.exports = {
 
       // SEND LINK
       return message.reply(
-        `✅ | Upload Successful\n\n🔗 ${link}`
+        `✅ \n\n🔗 ${link}`
       );
 
     } catch (err) {
