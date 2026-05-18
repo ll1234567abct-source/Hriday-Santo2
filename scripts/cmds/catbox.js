@@ -1,92 +1,223 @@
 const axios = require("axios");
+const fs = require("fs-extra");
 const FormData = require("form-data");
+const path = require("path");
+const os = require("os");
 
 module.exports = {
   config: {
     name: "catbox",
-    aliases: ["sy"],
-    version: "1.1",
-    author: "SIYAM",
+    aliases: ["ct"],
+    version: "3.0",
+    author: "𝆠፝𝐒𝐈𝐘𝐀𝐌-𝐇𝐀𝐒𝐀𝐍",
     countDown: 5,
     role: 0,
-    shortDescription: "Media uploader",
+    shortDescription: "Upload to Catbox",
+    longDescription: "Reply image/video/audio to upload",
     category: "tools",
     guide: {
       en: "{pn} reply to media"
     }
   },
 
-  onStart: async function ({ api, event, message }) {
-
-    const reply = event.messageReply;
-
-    if (!reply?.attachments?.length) {
-      return message.reply("⚠️ Reply to image/video/audio");
-    }
-
-    const media = reply.attachments[0];
-
-    if (!media.url) {
-      return message.reply("❌ Invalid media URL");
-    }
+  onStart: async function ({
+    api,
+    event,
+    message
+  }) {
 
     try {
 
-      api.setMessageReaction("📤", event.messageID, () => {}, true);
+      const reply =
+        event.messageReply;
 
-      const loading = await message.reply("⏳ Uploading...");
+      if (
+        !reply ||
+        !reply.attachments ||
+        !reply.attachments.length
+      ) {
 
-      // 📥 DIRECT BUFFER DOWNLOAD
-      const file = await axios.get(media.url, {
-        responseType: "arraybuffer",
-        timeout: 20000
-      });
-
-      if (!file.data) {
-        return message.reply("❌ Download failed");
+        return message.reply(
+          "⚠️ | Reply to image/video/audio"
+        );
       }
 
-      // 📤 FORM
-      const form = new FormData();
+      const attachment =
+        reply.attachments[0];
 
-      form.append("reqtype", "fileupload");
+      const fileUrl =
+        attachment.url;
 
-      form.append("fileToUpload", Buffer.from(file.data), {
-        filename: `file_${Date.now()}`
-      });
+      if (!fileUrl) {
 
-      // 🚀 UPLOAD
-      const res = await axios.post(
-        "https://catbox.moe/user/api.php",
-        form,
-        {
-          headers: form.getHeaders(),
-          timeout: 30000
+        return message.reply(
+          "❌ | Media URL not found"
+        );
+      }
+
+      // REACT
+      api.setMessageReaction(
+        "📤",
+        event.messageID,
+        () => {},
+        true
+      );
+
+      // LOADING
+      const loading =
+        await message.reply(
+          "🦅 | Uploading To Catbox Please Wait ⚡"
+        );
+
+      // EXTENSION
+      let ext = ".jpg";
+
+      if (
+        attachment.type === "video"
+      ) ext = ".mp4";
+
+      else if (
+        attachment.type === "audio"
+      ) ext = ".mp3";
+
+      else if (
+        attachment.type === "animated_image"
+      ) ext = ".gif";
+
+      // TEMP FILE
+      const tempPath =
+        path.join(
+          os.tmpdir(),
+          `catbox_${Date.now()}${ext}`
+        );
+
+      // DOWNLOAD
+      const response =
+        await axios({
+          method: "GET",
+          url: fileUrl,
+          responseType: "stream"
+        });
+
+      const writer =
+        fs.createWriteStream(
+          tempPath
+        );
+
+      response.data.pipe(writer);
+
+      await new Promise(
+        (
+          resolve,
+          reject
+        ) => {
+
+          writer.on(
+            "finish",
+            resolve
+          );
+
+          writer.on(
+            "error",
+            reject
+          );
         }
       );
 
-      if (!res.data) {
-        throw new Error("No response from server");
+      // FORM
+      const form =
+        new FormData();
+
+      form.append(
+        "reqtype",
+        "fileupload"
+      );
+
+      form.append(
+        "fileToUpload",
+        fs.createReadStream(
+          tempPath
+        )
+      );
+
+      // UPLOAD
+      const upload =
+        await axios.post(
+          "https://catbox.moe/user/api.php",
+          form,
+          {
+            headers:
+              form.getHeaders(),
+
+            maxBodyLength:
+              Infinity,
+
+            maxContentLength:
+              Infinity
+          }
+        );
+
+      // DELETE TEMP
+      if (
+        fs.existsSync(tempPath)
+      ) {
+
+        fs.unlinkSync(
+          tempPath
+        );
       }
 
-      api.setMessageReaction("✅", event.messageID, () => {}, true);
+      // LINK
+      const link =
+        upload.data
+        ?.toString()
+        .trim();
 
-      return message.reply(`✅ Upload Successful\n\n🔗 ${res.data}`);
+      if (
+        !link ||
+        !link.startsWith("https://")
+      ) {
+
+        throw new Error(
+          "Invalid Catbox Link"
+        );
+      }
+
+      // REACT SUCCESS
+      api.setMessageReaction(
+        "✅",
+        event.messageID,
+        () => {},
+        true
+      );
+
+      // REMOVE LOADING
+      try {
+
+        api.unsendMessage(
+          loading.messageID
+        );
+
+      } catch {}
+
+      // SEND LINK
+      return message.reply(
+        `✅ | Upload Successful\n\n🔗 ${link}`
+      );
 
     } catch (err) {
 
-      console.log("UPLOAD ERROR:", err.message);
+      console.log(err);
 
-      api.setMessageReaction("❌", event.messageID, () => {}, true);
+      api.setMessageReaction(
+        "❌",
+        event.messageID,
+        () => {},
+        true
+      );
 
       return message.reply(
-`❌ Upload failed
-
-কারণ:
-- 😾মাদার চুদ 🖕 
-- 🔐বট তোর বাপের🙄
-- 🖕আবাল 🫵 
-- 🤤চুদা খাবি🥵`
+        "❌ | Upload failed bro, try again later"
       );
     }
   }
