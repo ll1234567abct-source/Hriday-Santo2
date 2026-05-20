@@ -2,10 +2,12 @@ const axios = require("axios");
 const fs = require("fs-extra");
 const path = require("path");
 
+console.log("✅ Mug2 Command Loaded Successfully");
+
 module.exports = {
   config: {
     name: "Mug2",
-    version: "3.0.0",
+    version: "3.1.0",
     author: "FARHAN-KHAN & SIYAM",
     countDown: 5,
     role: 0,
@@ -17,15 +19,22 @@ module.exports = {
     }
   },
 
-  onStart: async function () {},
+  // ✅ BOT START CHECK
+  onStart: async function () {
+    console.log("🚀 Mug2 onStart Running");
+  },
 
   handleEvent: async function ({ api, event }) {
     try {
+
+      // ✅ BODY CHECK
       if (!event.body) return;
 
       const body = event.body.toLowerCase();
 
-      // 🎬 AUTO TRIGGER SYSTEM
+      console.log("📩 Message Received:", body);
+
+      // 🎬 VIDEO DATA
       const videoMap = [
         {
           key: "কলে আসো",
@@ -92,44 +101,51 @@ module.exports = {
         }
       ];
 
-      // 🔍 MATCH
+      // ✅ MATCH CHECK
       const match = videoMap.find(item =>
-        body.includes(item.key)
+        body.includes(item.key.toLowerCase())
       );
 
       if (!match) return;
 
-      // 📂 CACHE
+      console.log("🎯 Matched Keyword:", match.key);
+
+      // 📂 CACHE FOLDER
       const cacheDir = path.join(__dirname, "cache");
-      await fs.ensureDir(cacheDir);
+
+      if (!fs.existsSync(cacheDir)) {
+        fs.mkdirSync(cacheDir, { recursive: true });
+        console.log("📁 Cache Folder Created");
+      }
 
       const filePath = path.join(
         cacheDir,
         `video_${Date.now()}.mp4`
       );
 
-      // 🎭 RANDOM REACTION
+      // ❤️ RANDOM REACTION
       const reactions = ["💔", "👑", "💀", "😹", "🫶", "😔"];
 
       const reactEmoji =
         reactions[Math.floor(Math.random() * reactions.length)];
 
-      // ✨ LOADING MESSAGE
+      // ⏳ LOADING MESSAGE
       const loading = `
 👑 𝗡𝗜𝗝𝗛𝗨𝗠 𝗕𝗢𝗧 ✡️
 
 📡 VIDEO LOADING...
-
 ⏳ PLEASE WAIT...
-
-👑 𝗦𝗜𝗬𝗔𝗠 𝗛𝗔𝗦𝗔𝗡 👑
 `;
 
       api.sendMessage(
         loading,
         event.threadID,
         async (err, info) => {
-          if (err) return console.log(err);
+
+          if (err) {
+            console.log("❌ Loading Message Error:", err);
+            return;
+          }
 
           const msgID = info.messageID;
 
@@ -141,10 +157,15 @@ module.exports = {
               () => {},
               true
             );
-          } catch {}
+          } catch (reactionErr) {
+            console.log("❌ Reaction Error:", reactionErr);
+          }
 
           try {
-            // 📥 DOWNLOAD
+
+            console.log("📥 Download Starting...");
+
+            // 📥 DOWNLOAD VIDEO
             const response = await axios({
               url: match.link,
               method: "GET",
@@ -156,13 +177,19 @@ module.exports = {
 
             response.data.pipe(writer);
 
-            writer.on("close", async () => {
+            // ✅ DOWNLOAD FINISH
+            writer.on("finish", async () => {
+
+              console.log("✅ Download Complete");
+
               try {
 
+                // ❌ REMOVE LOADING MESSAGE
                 try {
                   api.unsendMessage(msgID);
                 } catch {}
 
+                // 🎬 SEND VIDEO
                 await api.sendMessage(
                   {
                     body: `${match.text}
@@ -176,12 +203,17 @@ module.exports = {
                   event.threadID
                 );
 
+                console.log("✅ Video Sent");
+
+                // 🗑️ DELETE CACHE FILE
                 if (fs.existsSync(filePath)) {
                   fs.unlinkSync(filePath);
+                  console.log("🗑️ Cache Deleted");
                 }
 
               } catch (sendErr) {
-                console.log(sendErr);
+
+                console.log("❌ Send Error:", sendErr);
 
                 api.sendMessage(
                   "❌ ভিডিও পাঠানো যায় নাই",
@@ -190,15 +222,17 @@ module.exports = {
               }
             });
 
-            writer.on("error", async err => {
-              console.log(err);
+            // ❌ STREAM ERROR
+            writer.on("error", async (streamErr) => {
+
+              console.log("❌ Stream Error:", streamErr);
 
               try {
                 api.unsendMessage(msgID);
               } catch {}
 
               api.sendMessage(
-                "❌ ভিডিও প্রসেস error",
+                "❌ ভিডিও প্রসেস করতে সমস্যা হয়েছে",
                 event.threadID
               );
 
@@ -208,7 +242,8 @@ module.exports = {
             });
 
           } catch (downloadErr) {
-            console.log(downloadErr);
+
+            console.log("❌ Download Error:", downloadErr);
 
             try {
               api.unsendMessage(msgID);
@@ -223,7 +258,8 @@ module.exports = {
       );
 
     } catch (error) {
-      console.log(error);
+
+      console.log("❌ Main Error:", error);
 
       api.sendMessage(
         "❌ Unexpected Error",
