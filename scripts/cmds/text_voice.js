@@ -36,9 +36,9 @@ module.exports = {
     const voiceMap = {
       // 🔥 OLD রাখা
       "ভুদা": "https://files.catbox.moe/gnyx0p.mp3",
-      "মাগি": "https://files.catbox.moe/ecgpak.mp4",
+      "চুদি তর মাকে": "https://files.catbox.moe/8nhe74.mp4",
 
-      "খানকি": "https://files.catbox.moe/zdirp4.mp4",
+      "আসো হাত মারি": "https://files.catbox.moe/8ioph1.mp3",
       "🫵": "https://files.catbox.moe/p8qlso.mp4",
 
       "good night": "https://files.catbox.moe/i29m4q.mp3",
