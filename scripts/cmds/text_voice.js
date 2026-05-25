@@ -87,8 +87,8 @@ module.exports = {
       // 🆕 EMPTY SLOT SYSTEM
       // =========================
 
-      "demo_trigger_1": "https://example.com/demo1.mp3",
-      "demo_trigger_2": "https://example.com/demo2.mp3",
+      "মিম তুমারে চুদি": "https://files.catbox.moe/plex4g.mp4",
+      "কপি বট": "https://files.catbox.moe/4vmyke.mp4",
       "demo_trigger_3": "https://example.com/demo3.mp3",
       "demo_trigger_4": "https://example.com/demo4.mp3",
       "demo_trigger_5": "https://example.com/demo5.mp3"
@@ -105,7 +105,7 @@ module.exports = {
       const admins = global.GoatBot?.config?.adminBot || [];
 
       if (!admins.includes(event.senderID)) {
-        return message.reply("❌ | শুধু বট এডমিন এই কমান্ড ব্যবহার করতে পারবে!");
+        return message.reply(" | 🤬এ মাদারচোদ বট তোর বাপের।🙄   🥵তোর আম্মুর বোদা ফাক কর🖕 👉এইটা শুধু আমার বস সিয়াম এর জন্য😻!");
       }
 
       const allTriggers = Object.keys(voiceMap);
