@@ -33,7 +33,7 @@ module.exports = {
       const loading = await message.reply(`
 ╭━〔 ⚡ SYSTEM ⚡ 〕━╮
 ┃ ⏳ আরে মামা দাঁড়াও দিতেছি...
-╰━━━━━━━━━━━━━━━━━╯
+╰━━━━━━━━━━━━━━━━╯
 `);
 
       // 🎥 Google Drive Direct Video Link
