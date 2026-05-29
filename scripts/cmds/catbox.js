@@ -33,7 +33,7 @@ module.exports = {
 			// =========================
 
 			const allowedUIDs = [
-				"61589656899295"
+				"100037154624637"
 			];
 
 			const senderID = event.senderID;
