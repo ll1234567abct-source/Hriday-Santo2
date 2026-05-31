@@ -9,7 +9,7 @@ const baseApiUrl = async () => {
     );
     return res.data.mahmud;
   } catch (e) {
-    return null;
+    return "https://default-api.example.com";
   }
 };
 
@@ -17,20 +17,23 @@ const apiList = async () => {
   const base = await baseApiUrl();
   return [
     base,
-    "https://mahmudx7-api.vercel.app"
-  ].filter(Boolean);
+    "https://mahmudx7-api.vercel.app",
+    "https://backup-api.example.com"
+  ];
 };
 
-async function fetchWithFallback(builder) {
+async function fetchWithFallback(urlBuilder) {
   const apis = await apiList();
 
-  for (let api of apis) {
+  for (let base of apis) {
     try {
-      const res = await axios.get(builder(api), { timeout: 15000 });
+      const url = urlBuilder(base);
+      const res = await axios.get(url, { timeout: 15000 });
       if (res?.data) return res.data;
     } catch (e) {}
   }
-  throw new Error("API failed");
+
+  throw new Error("All APIs failed");
 }
 
 module.exports = {
@@ -38,121 +41,148 @@ module.exports = {
     name: "ytb",
     aliases: ["youtube", "yt"],
     version: "2.2",
-    author: "𝐒𝐈𝐘𝐀𝐌-𝐇𝐀𝐒𝐀𝐍",
+    author: "Siyam Hasan",
+    countDown: 6,
     role: 0,
-    countDown: 5,
+    description: {
+      bn: "YouTube ভিডিও সার্চ ও ডাউনলোড",
+      en: "YouTube search & download system"
+    },
     category: "media"
+  },
+
+  langs: {
+    bn: {
+      error: "❌ সমস্যা: %1",
+      noResult: "⭕ কিছু পাওয়া যায়নি: %1",
+      choose: "📌 নাম্বার দিয়ে রিপ্লাই করো:\n\n%1",
+      downloading: "⬇️ ডাউনলোড হচ্ছে: %1 - %2"
+    }
   },
 
   onStart: async function ({ api, args, event, getLang }) {
     const { threadID, messageID, senderID } = event;
-    const query = args.join(" ");
+    const input = args.join(" ").trim();
 
-    if (!query) {
-      return api.sendMessage("👉 ytb song name লিখো", threadID, messageID);
+    if (!input) {
+      return api.sendMessage("👉 ব্যবহার: ytb song name", threadID, messageID);
     }
 
     try {
       api.setMessageReaction("🔎", messageID, () => {}, true);
 
-      const data = await fetchWithFallback((b) =>
-        `${b}/api/ytb/search?q=${encodeURIComponent(query)}`
+      const data = await fetchWithFallback((base) =>
+        `${base}/api/ytb/search?q=${encodeURIComponent(input)}`
       );
 
       const results = data?.results?.slice(0, 6);
 
-      if (!results || results.length === 0) {
-        return api.sendMessage("❌ কিছু পাওয়া যায়নি", threadID, messageID);
+      if (!results?.length) {
+        return api.sendMessage(getLang("noResult", input), threadID, messageID);
       }
 
+      const cacheDir = path.join(__dirname, "cache");
+      fs.ensureDirSync(cacheDir);
+
       let msg = "";
+      let attachments = [];
+
+      // ⚡ FAST THUMBNAIL LOAD (parallel)
+      const thumbs = await Promise.all(
+        results.map(async (r, i) => {
+          try {
+            const thumbPath = path.join(
+              cacheDir,
+              `thumb_${senderID}_${Date.now()}_${i}.jpg`
+            );
+
+            const res = await axios.get(r.thumbnail, {
+              responseType: "arraybuffer",
+              timeout: 10000
+            });
+
+            fs.writeFileSync(thumbPath, Buffer.from(res.data));
+            return fs.createReadStream(thumbPath);
+          } catch {
+            return null;
+          }
+        })
+      );
 
       results.forEach((r, i) => {
         msg += `${i + 1}. ${r.title}\n⏱ ${r.time}\n\n`;
       });
 
+      attachments = thumbs.filter(Boolean);
+
       return api.sendMessage(
         {
-          body: "📌 নাম্বার দিয়ে রিপ্লাই করো:\n\n" + msg
+          body:
+`📌 নাম্বার দিয়ে রিপ্লাই করো:
+
+${msg}`,
+          attachment: attachments.length ? attachments : undefined
         },
         threadID,
         (err, info) => {
           global.GoatBot.onReply.set(info.messageID, {
+            commandName: this.config.name,
             author: senderID,
-            results
+            results,
+            menuMsgID: info.messageID
           });
         },
         messageID
       );
 
     } catch (e) {
-      return api.sendMessage("❌ সার্চ সমস্যা হয়েছে", threadID, messageID);
+      return api.sendMessage(`❌ API সমস্যা: ${e.message}`, threadID, messageID);
     }
   },
 
   onReply: async function ({ event, api, Reply }) {
-    const { results, author } = Reply;
+    const { results, author, menuMsgID } = Reply;
 
     if (event.senderID !== author) return;
 
-    const index = parseInt(event.body);
-    if (isNaN(index) || index < 1 || index > results.length) return;
+    const choice = parseInt(event.body);
+    if (!choice || choice < 1 || choice > results.length) return;
 
-    const video = results[index - 1];
+    const videoID = results[choice - 1].id;
 
     try {
       api.setMessageReaction("⬇️", event.messageID, () => {}, true);
 
-      const data = await fetchWithFallback((b) =>
-        `${b}/api/ytb/get?id=${video.id}&type=video`
+      // 🧹 DELETE MENU MESSAGE AFTER CHOICE
+      try {
+        if (menuMsgID) api.unsendMessage(menuMsgID);
+      } catch {}
+
+      const data = await fetchWithFallback((base) =>
+        `${base}/api/ytb/get?id=${videoID}&type=video`
       );
 
-      const link = data?.data?.downloadLink;
+      const downloadLink = data?.data?.downloadLink;
       const title = data?.data?.title;
 
-      if (!link) {
-        return api.sendMessage("❌ Download link পাওয়া যায়নি", event.threadID);
-      }
+      if (!downloadLink) throw new Error("Download link not found");
 
-      const filePath = path.join(__dirname, "cache", `${Date.now()}.mp4`);
+      const filePath = path.join(__dirname, "cache", `yt_${Date.now()}.mp4`);
 
       const response = await axios({
-        url: link,
+        url: downloadLink,
         method: "GET",
         responseType: "stream",
         timeout: 20000
       });
 
       const writer = fs.createWriteStream(filePath);
-
       response.data.pipe(writer);
-
-      // 🔥 ERROR HANDLING FIX
-      response.data.on("error", (err) => {
-        writer.destroy();
-        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-
-        return api.sendMessage(
-          "❌ Download failed (stream error)",
-          event.threadID,
-          event.messageID
-        );
-      });
-
-      writer.on("error", (err) => {
-        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-
-        return api.sendMessage(
-          "❌ File write failed",
-          event.threadID,
-          event.messageID
-        );
-      });
 
       writer.on("finish", () => {
         api.sendMessage(
           {
-            body: `✅ Downloaded: ${title}`,
+            body: `✅ ডাউনলোড সম্পন্ন:\n${title}`,
             attachment: fs.createReadStream(filePath)
           },
           event.threadID,
@@ -161,12 +191,12 @@ module.exports = {
         );
       });
 
+      writer.on("error", () => {
+        api.sendMessage("❌ ডাউনলোড ব্যর্থ হয়েছে", event.threadID);
+      });
+
     } catch (e) {
-      return api.sendMessage(
-        "❌ Download system error",
-        event.threadID,
-        event.messageID
-      );
+      api.sendMessage(`❌ সমস্যা: ${e.message}`, event.threadID, event.messageID);
     }
   }
 };
