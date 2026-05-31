@@ -6,8 +6,8 @@ const path = require("path");
 module.exports = {
   config: {
     name: "video",
-    version: "2.2.2",
-    author: "MR_FARHAN",
+    version: "2.2.3",
+    author: "𝆠፝𝐒𝐈𝐘𝐀𝐌-𝐇𝐀𝐒𝐀𝐍",
     countDown: 5,
     role: 0,
     shortDescription: "Search & download YouTube videos",
@@ -18,18 +18,55 @@ module.exports = {
     }
   },
 
+  // 🎯 MULTI API SEARCH FUNCTION (ADDED ONLY)
+  async searchVideo(query) {
+    const apis = [
+      `https://betadash-search-download.vercel.app/yt?search=${encodeURIComponent(query)}`,
+      `https://yt-api-imran.vercel.app/api/search?query=${encodeURIComponent(query)}`,
+      `https://www.googleapis.com/youtube/v3/search?q=${encodeURIComponent(query)}`
+    ];
+
+    for (let url of apis) {
+      try {
+        const res = await axios.get(url);
+
+        let video = null;
+
+        // API-1 format
+        if (res.data?.[0]) video = res.data[0];
+
+        // API-2 format
+        else if (res.data?.results?.[0]) video = res.data.results[0];
+
+        // API-3 fallback format
+        else if (res.data?.items?.[0]) {
+          const item = res.data.items[0];
+          video = {
+            title: item.snippet?.title,
+            url: `https://www.youtube.com/watch?v=${item.id?.videoId}`
+          };
+        }
+
+        if (video?.url) return video;
+
+      } catch (e) {
+        continue; // next API try
+      }
+    }
+
+    return null;
+  },
+
   onStart: async function ({ api, event, args }) {
     const { threadID, messageID, body } = event;
     const creatorName = "Farhan Khan";
 
     let query = args.join(" ");
-    
-    // Handling No-prefix input
+
     if (!query && body) {
       query = body.replace(/^video\s+/i, "").trim();
     }
 
-    // Your requested English error message and example
     if (!query || query.toLowerCase() === "video") {
       return api.sendMessage(
         `❌ Please provide a song name.\n📌 Example: video Let Me Love You`,
@@ -47,13 +84,10 @@ module.exports = {
       );
       tempMsgID = searching.messageID;
 
-      // Searching using BetaDash API
-      const searchRes = await axios.get(
-        `https://betadash-search-download.vercel.app/yt?search=${encodeURIComponent(query)}`
-      );
+      // 🔥 NOW USING MULTI API SEARCH (ADDED)
+      const video = await module.exports.searchVideo(query);
 
-      const video = searchRes.data?.[0];
-      if (!video || !video.url) throw new Error("No results found.");
+      if (!video || !video.url) throw new Error("No results found from all APIs.");
 
       await api.unsendMessage(tempMsgID).catch(() => {});
 
@@ -63,7 +97,6 @@ module.exports = {
       );
       tempMsgID = downloading.messageID;
 
-      // Getting download link using Imran API
       const dlRes = await axios.get(
         `https://yt-api-imran.vercel.app/api?url=${video.url}`
       );
@@ -71,7 +104,6 @@ module.exports = {
       const downloadUrl = dlRes.data?.downloadUrl;
       if (!downloadUrl) throw new Error("Download link not available.");
 
-      // Fetching the video buffer
       const buffer = (
         await axios.get(downloadUrl, { responseType: "arraybuffer" })
       ).data;
@@ -88,7 +120,7 @@ module.exports = {
           `🎬 VIDEO READY\n` +
           `━━━━━━━━━━━━━━━━━━\n` +
           `📖 Title: ${video.title}\n` +
-          `⏱ Duration: ${video.time}\n` +
+          `⏱ Duration: ${video.time || "N/A"}\n` +
           `🖌️ Power by: ${creatorName}\n` +
           `━━━━━━━━━━━━━━━━━━`,
         attachment: fs.createReadStream(filePath)
