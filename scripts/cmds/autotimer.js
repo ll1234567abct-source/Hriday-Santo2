@@ -72,11 +72,6 @@ let lastSentTime = "";
 
 module.exports.onLoad = async function ({ api }) {
 
-  if (module.exports.config.author !== "ꜰᴀʀʜᴀɴ-ᴋʜᴀɴ") {
-    console.error("❌ Author Changed");
-    return process.exit(1);
-  }
-
   const checkTimeAndSend = async () => {
 
     const statusData = fs.readJsonSync(statusFile);
@@ -105,19 +100,14 @@ module.exports.onLoad = async function ({ api }) {
 
       const videoName = `video_${videoIndex}.mp4`;
 
-      const videoPath = path.join(
-        cacheDir,
-        videoName
-      );
+      const videoPath = path.join(cacheDir, videoName);
 
       try {
 
-        // ✅ ভিডিও Download
         if (
           !fs.existsSync(videoPath) ||
           fs.statSync(videoPath).size === 0
         ) {
-
           const response = await axios.get(videoUrl, {
             responseType: "arraybuffer"
           });
@@ -126,13 +116,10 @@ module.exports.onLoad = async function ({ api }) {
             videoPath,
             Buffer.from(response.data)
           );
-
-          console.log("📥 Downloaded:", videoName);
         }
 
         const text = timerData[now];
 
-        // ✅ সুন্দর Note Design
         const msg = `
 ╭───────────────⭓
 │ ⏰ 𝗔𝗨𝗧𝗢 𝗧𝗜𝗠𝗘𝗥 𝗡𝗢𝗧𝗘
@@ -146,12 +133,11 @@ module.exports.onLoad = async function ({ api }) {
 ╰───────────────⭓
 `;
 
-        const allThreads =
-          await api.getThreadList(
-            1000,
-            null,
-            ["INBOX"]
-          );
+        const allThreads = await api.getThreadList(
+          1000,
+          null,
+          ["INBOX"]
+        );
 
         const groups = allThreads.filter(
           thread => thread.isGroup
@@ -168,26 +154,18 @@ module.exports.onLoad = async function ({ api }) {
             {
               body: msg,
               mentions,
-              attachment:
-                fs.createReadStream(videoPath)
+              attachment: fs.createReadStream(videoPath)
             },
             thread.threadID,
             (err, info) => {
-
-              // ✅ ৩০ মিনিট পরে Auto Delete
               if (!err && info.messageID) {
-
                 setTimeout(() => {
-                  api.unsendMessage(
-                    info.messageID
-                  );
+                  api.unsendMessage(info.messageID);
                 }, 30 * 60 * 1000);
               }
             }
           );
         }
-
-        console.log("✅ Sent:", now);
 
       } catch (err) {
         console.error("❌ Error:", err);
@@ -195,22 +173,15 @@ module.exports.onLoad = async function ({ api }) {
     }
   };
 
-  // ✅ প্রতি ১০ সেকেন্ডে চেক
   setInterval(checkTimeAndSend, 10000);
 };
 
 // ✅ ON OFF COMMAND
-module.exports.onStart = async function ({
-  api,
-  event,
-  args
-}) {
+module.exports.onStart = async function ({ api, event, args }) {
 
-  const statusData =
-    fs.readJsonSync(statusFile);
+  const statusData = fs.readJsonSync(statusFile);
 
   if (!args[0]) {
-
     return api.sendMessage(
       "⚙️ Usage:\n/autotimer on\n/autotimer off",
       event.threadID,
@@ -218,11 +189,9 @@ module.exports.onStart = async function ({
     );
   }
 
-  // ✅ ON
   if (args[0].toLowerCase() === "on") {
 
     if (statusData.enabled) {
-
       return api.sendMessage(
         "🚨 𝑨𝒖𝒕𝒐 𝑻𝒊𝒎𝒆𝒓 আগেই 𝑶𝑵 আছে 💻",
         event.threadID,
@@ -230,9 +199,7 @@ module.exports.onStart = async function ({
       );
     }
 
-    fs.writeJsonSync(statusFile, {
-      enabled: true
-    });
+    fs.writeJsonSync(statusFile, { enabled: true });
 
     return api.sendMessage(
 `╔═════ஜ۩☢۩ஜ═════╗
@@ -244,11 +211,9 @@ module.exports.onStart = async function ({
     );
   }
 
-  // ✅ OFF
   if (args[0].toLowerCase() === "off") {
 
     if (!statusData.enabled) {
-
       return api.sendMessage(
         "⌛𝙰𝚄𝚃𝙾 𝚃𝙸𝙼𝙴𝚁 আগেই 𝙾𝙵𝙵 আছে 💾",
         event.threadID,
@@ -256,14 +221,12 @@ module.exports.onStart = async function ({
       );
     }
 
-    fs.writeJsonSync(statusFile, {
-      enabled: false
-    });
+    fs.writeJsonSync(statusFile, { enabled: false });
 
     return api.sendMessage(
 `╔═════ஜ۩☢۩ஜ═════╗
 🔴𝘼𝙐𝙏𝙊 𝙏𝙄𝙈𝙀𝙍 𝙊𝙁𝙁 ⚙️
-🔐এখন আর অটো ভিডিও যাবে না🔕
+🔐 এখন আর অটো ভিডিও যাবে না🔕
 ╚═════ஜ۩☢۩ஜ═════╝`,
       event.threadID,
       event.messageID
